@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/tables/page": "app/tables/page.js",
+  "/settings/page": "app/settings/page.js",
+  "/functions/page": "app/functions/page.js",
+  "/sql-query/page": "app/sql-query/page.js"
+}

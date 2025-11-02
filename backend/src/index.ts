@@ -35,10 +35,11 @@ const port = process.env.PORT || 4000;
 app.use(cors());
 app.use(bodyParser.json());
 
-// Middleware: sanitize responses by converting BigInt values to strings so
+// Middleware: sanitize responses by converting BigInt and Date values to strings so
 // express/res.json doesn't throw when serializing mocked or real DB rows.
 function sanitizeBigInt(value: any): any {
   if (typeof value === 'bigint') return value.toString();
+  if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(sanitizeBigInt);
   if (value && typeof value === 'object') {
     const out: any = {};
@@ -187,6 +188,51 @@ app.delete('/api/:table/:id', async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'failed to delete row' });
+  }
+});
+
+// POST /api/query/execute -> execute custom SQL query
+app.post('/api/query/execute', async (req: Request, res: Response) => {
+  const { query } = req.body;
+  if (!query || typeof query !== 'string') {
+    return res.status(400).json({ error: 'Query string is required' });
+  }
+
+  // Trim and validate query
+  const trimmedQuery = query.trim();
+  if (trimmedQuery.length === 0) {
+    return res.status(400).json({ error: 'Query cannot be empty' });
+  }
+
+  try {
+    // Detect if it's a SELECT query or a procedure call
+    const isSelect = /^\s*SELECT/i.test(trimmedQuery);
+    const isCall = /^\s*CALL/i.test(trimmedQuery);
+
+    if (isSelect || isCall) {
+      // For SELECT and CALL, return results
+      const results = await prisma.$queryRawUnsafe(trimmedQuery);
+      res.json({
+        ok: true,
+        data: results,
+        rowCount: Array.isArray(results) ? results.length : 0,
+        queryType: isCall ? 'PROCEDURE' : 'SELECT'
+      });
+    } else {
+      // For other queries (INSERT, UPDATE, DELETE, etc.)
+      const result = await prisma.$executeRawUnsafe(trimmedQuery);
+      res.json({
+        ok: true,
+        affectedRows: result,
+        queryType: 'MUTATION'
+      });
+    }
+  } catch (err: any) {
+    console.error('Query execution error:', err);
+    res.status(500).json({
+      error: err.message || 'Failed to execute query',
+      details: err.code || 'Unknown error'
+    });
   }
 });
 

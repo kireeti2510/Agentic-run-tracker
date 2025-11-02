@@ -23,27 +23,41 @@ export default function TableView({ table, data, onEdit, onDelete }: any) {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {data && data.length > 0 ? data.map((row: any, i: number) => (
-                <MotionTr 
-                  key={i} 
-                  initial={{ opacity: 0, y: 4 }} 
-                  animate={{ opacity: 1, y: 0 }} 
+                <MotionTr
+                  key={i}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  {Object.keys(row).slice(0, 6).map((c) => (
-                    <td key={c} className="px-3 md:px-4 py-3 align-top max-w-xs truncate" title={String(row[c])}>
-                      {String(row[c])}
-                    </td>
-                  ))}
+                  {Object.keys(row).slice(0, 6).map((c) => {
+                    let displayValue = row[c]
+
+                    // Format dates for display
+                    if (displayValue && typeof displayValue === 'string' && displayValue.includes('T')) {
+                      try {
+                        const date = new Date(displayValue)
+                        displayValue = date.toLocaleString()
+                      } catch (e) {
+                        // Keep original if parsing fails
+                      }
+                    }
+
+                    return (
+                      <td key={c} className="px-3 md:px-4 py-3 align-top max-w-xs truncate" title={String(displayValue)}>
+                        {String(displayValue)}
+                      </td>
+                    )
+                  })}
                   <td className="px-3 md:px-4 py-3 align-top whitespace-nowrap">
                     <div className="flex gap-2 flex-wrap">
-                      <button 
-                        onClick={() => onEdit(row)} 
+                      <button
+                        onClick={() => onEdit(row)}
                         className="text-sm px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
                       >
                         Edit
                       </button>
-                      <button 
-                        onClick={() => onDelete(row)} 
+                      <button
+                        onClick={() => onDelete(row)}
                         className="text-sm px-2 py-1 text-red-600 hover:bg-red-50 rounded transition-colors"
                       >
                         Delete

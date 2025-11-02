@@ -18,6 +18,7 @@ function TablePageContent({ params }: any) {
   const [selected, setSelected] = useState<any>(null)
   const [open, setOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [lastDeleted, setLastDeleted] = useState<any>(null) // Store deleted record for undo
 
   function onEdit(row: any) {
     setSelected(row)
@@ -30,26 +31,98 @@ function TablePageContent({ params }: any) {
   }
 
   async function handleSave(form: any) {
+    // Check if we're editing: selected has a non-empty ID field value (not just empty string)
+    const firstValue = selected ? Object.values(selected)[0] : null
+    const isEditing = firstValue && String(firstValue).trim() !== ''
+
     try {
-      if (form && selected) {
+      // Filter out auto-generated fields when creating new records
+      const cleanedForm = { ...form }
+      if (!isEditing) {
+        // Remove fields with default values (like CreatedAt, UpdatedAt)
+        Object.keys(cleanedForm).forEach(key => {
+          const isAutoField = key.toLowerCase().includes('createdat') ||
+            key.toLowerCase().includes('updatedat') ||
+            key.toLowerCase().includes('timestamp')
+          if (isAutoField || cleanedForm[key] === '' || cleanedForm[key] === null) {
+            delete cleanedForm[key]
+          }
+        })
+      }
+
+      if (isEditing) {
         const id = Object.values(selected)[0]
-        await update.mutateAsync({ id: String(id), payload: form })
-        toast.success('Updated')
+        const result = await update.mutateAsync({ id: String(id), payload: cleanedForm })
+        if (result && !result.ok) {
+          toast.error(result.error || 'Failed to update record')
+          return
+        }
+        toast.success('✅ Record updated successfully!')
       } else {
-        await create.mutateAsync(form)
-        toast.success('Created')
+        const result = await create.mutateAsync(cleanedForm)
+        if (result && !result.ok) {
+          toast.error(result.error || 'Failed to create record')
+          return
+        }
+        toast.success('✅ Record created successfully!')
       }
       setOpen(false)
-    } catch (e) { toast.error('Save failed') }
+      setSelected(null)
+    } catch (e: any) {
+      const errorMsg = e?.error || e?.message || (isEditing ? 'Failed to update record' : 'Failed to create record')
+      toast.error(errorMsg)
+      console.error('Save error:', e)
+    }
   }
 
   async function handleConfirmDelete() {
     try {
       const id = Object.values(selected)[0]
-      await remove.mutateAsync(String(id))
-      toast.success('Deleted')
+      // Store the deleted record for undo functionality
+      const deletedRecord = { ...selected }
+
+      const result = await remove.mutateAsync(String(id))
+      if (result && !result.ok) {
+        toast.error(result.error || 'Delete failed')
+        setConfirmOpen(false)
+        return
+      }
+
+      // Store deleted record and show undo option
+      setLastDeleted(deletedRecord)
       setConfirmOpen(false)
-    } catch (e) { toast.error('Delete failed') }
+
+      // Show success toast with undo button
+      toast.success('✅ Record deleted successfully', {
+        duration: 5000,
+        action: {
+          label: 'Undo',
+          onClick: () => handleUndo(deletedRecord)
+        }
+      })
+    } catch (e: any) {
+      const errorMsg = e?.error || e?.message || 'Delete failed'
+      toast.error(errorMsg)
+      setConfirmOpen(false)
+      console.error('Delete error:', e)
+    }
+  }
+
+  async function handleUndo(deletedRecord: any) {
+    try {
+      // Recreate the deleted record
+      const result = await create.mutateAsync(deletedRecord)
+      if (result && !result.ok) {
+        toast.error(result.error || 'Failed to restore record')
+        return
+      }
+      toast.success('✅ Record restored successfully!')
+      setLastDeleted(null)
+    } catch (e: any) {
+      const errorMsg = e?.error || e?.message || 'Failed to restore record'
+      toast.error(errorMsg)
+      console.error('Undo error:', e)
+    }
   }
 
   return (
@@ -64,8 +137,15 @@ function TablePageContent({ params }: any) {
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          <button 
-            onClick={() => { setSelected({}); setOpen(true) }} 
+          <button
+            onClick={() => {
+              // Create empty form with all field names from the schema
+              const emptyForm = query.data?.data?.[0]
+                ? Object.keys(query.data.data[0]).reduce((acc: any, key) => ({ ...acc, [key]: '' }), {})
+                : {}
+              setSelected(emptyForm); // Set to empty form, not null
+              setOpen(true)
+            }}
             className="flex-1 sm:flex-initial px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
           >
             + New Record
@@ -79,7 +159,7 @@ function TablePageContent({ params }: any) {
       ) : (
         <>
           <TableView table={table} data={query.data?.data ?? []} onEdit={onEdit} onDelete={onDelete} />
-          
+
           {/* Pagination Controls */}
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-4 rounded-lg shadow">
             <div className="text-sm text-gray-600">
@@ -104,9 +184,15 @@ function TablePageContent({ params }: any) {
           </div>
         </>
       )}
-      
+
       <RecordModal open={open} onClose={() => setOpen(false)} onSave={handleSave} initial={selected} />
-      <ConfirmDialog open={confirmOpen} onClose={() => setConfirmOpen(false)} onConfirm={handleConfirmDelete} title="Confirm delete" body="This action cannot be undone." />
+      <ConfirmDialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Confirm Delete"
+        body="Are you sure you want to delete this record? This action cannot be undone."
+      />
     </div>
   )
 }

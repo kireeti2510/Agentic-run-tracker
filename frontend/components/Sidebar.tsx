@@ -1,7 +1,7 @@
 "use client"
 import React from 'react'
 import Link from 'next/link'
-import { Home, Table2, Settings } from 'lucide-react'
+import { Home, Table2, Settings, Code, FileCode } from 'lucide-react'
 
 interface SidebarProps {
   onNavigate?: () => void
@@ -14,8 +14,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
       <nav className="flex-1">
         <ul className="space-y-2">
           <li>
-            <Link 
-              href="/" 
+            <Link
+              href="/"
               onClick={onNavigate}
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
@@ -24,8 +24,8 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
             </Link>
           </li>
           <li>
-            <Link 
-              href="/tables" 
+            <Link
+              href="/tables"
               onClick={onNavigate}
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
@@ -34,8 +34,28 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
             </Link>
           </li>
           <li>
-            <Link 
-              href="/settings" 
+            <Link
+              href="/sql-query"
+              onClick={onNavigate}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Code size={20} />
+              <span>SQL Query</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/functions"
+              onClick={onNavigate}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <FileCode size={20} />
+              <span>Functions & Procedures</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/settings"
               onClick={onNavigate}
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
