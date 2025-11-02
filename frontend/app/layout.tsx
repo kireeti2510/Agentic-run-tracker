@@ -1,6 +1,19 @@
 import './globals.css'
 import React from 'react'
 import ClientShell from '../components/ClientShell'
+import { Inter, JetBrains_Mono } from 'next/font/google'
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+})
 
 export const metadata = {
   title: 'Agentic Run Tracker',
@@ -9,8 +22,8 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="bg-gray-50 text-gray-900">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className="bg-gray-50 text-gray-900 font-sans">
         <div className="min-h-screen flex flex-col md:flex-row">
           <ClientShell />
           <main className="flex-1 p-4 md:p-6 w-full overflow-x-hidden">{children}</main>
