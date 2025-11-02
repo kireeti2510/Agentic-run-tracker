@@ -3,12 +3,49 @@ import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 const MotionDiv: any = (motion as any).div
 
-export default function RecordModal({ open, onClose, onSave, initial }: any) {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'
+
+export default function RecordModal({ open, onClose, onSave, initial, table }: any) {
   const [form, setForm] = useState<any>({})
-  useEffect(() => { setForm(initial || {}) }, [initial])
+  const [schema, setSchema] = useState<any[]>([])
+
+  useEffect(() => {
+    setForm(initial || {})
+    // Fetch schema information when modal opens
+    if (open && table) {
+      fetchSchema()
+    }
+  }, [initial, open, table])
+
+  async function fetchSchema() {
+    try {
+      const response = await fetch(`${API_URL}/api/meta/schema/${table}`)
+      const data = await response.json()
+      setSchema(data.columns || [])
+    } catch (error) {
+      console.error('Failed to fetch schema:', error)
+    }
+  }
 
   function handleChange(k: string, v: any) {
     setForm((s: any) => ({ ...s, [k]: v }))
+  }
+
+  function hasDefaultValue(columnName: string): boolean {
+    const col = schema.find(c => c.name === columnName)
+    return col && (col.defaultValue !== null || col.extra?.toLowerCase().includes('auto_increment'))
+  }
+
+  function getDefaultLabel(columnName: string): string {
+    const col = schema.find(c => c.name === columnName)
+    if (!col) return ''
+    if (col.extra?.toLowerCase().includes('auto_increment')) return '(auto-increment)'
+    if (col.defaultValue) {
+      const defaultVal = col.defaultValue.toString()
+      if (defaultVal.includes('CURRENT_TIMESTAMP')) return '(auto: current timestamp)'
+      return `(default: ${defaultVal})`
+    }
+    return '(auto)'
   }
 
   // Check if we're editing: initial has a non-empty ID field value
@@ -30,10 +67,9 @@ export default function RecordModal({ open, onClose, onSave, initial }: any) {
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[60vh] overflow-auto">
           {Object.keys(form).slice(0, 20).map((k) => {
-            // Check if field has default value (CreatedAt, UpdatedAt, etc.)
-            const isAutoField: boolean = k.toLowerCase().includes('createdat') ||
-              k.toLowerCase().includes('updatedat') ||
-              k.toLowerCase().includes('timestamp')
+            // Check if field has default value
+            const hasDefault = hasDefaultValue(k)
+            const defaultLabel = getDefaultLabel(k)
 
             // Format value for display (handle dates)
             let displayValue = form[k] ?? ''
@@ -50,20 +86,20 @@ export default function RecordModal({ open, onClose, onSave, initial }: any) {
             return (
               <div key={k} className="flex flex-col">
                 <label className="text-xs md:text-sm text-gray-600 mb-1 font-medium">
-                  {k} {isAutoField && !isEditing && <span className="text-gray-400">(auto)</span>}
+                  {k} {hasDefault && !isEditing && <span className="text-green-600 text-xs">{defaultLabel}</span>}
                 </label>
-                {isAutoField && !isEditing ? (
+                {hasDefault && !isEditing ? (
                   <input
-                    value="(auto-generated)"
+                    value={defaultLabel}
                     disabled
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-green-50 text-gray-600 cursor-not-allowed"
                   />
                 ) : (
                   <input
                     value={displayValue}
                     onChange={(e) => handleChange(k, e.target.value)}
-                    disabled={isAutoField && isEditing}
-                    className={`w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isAutoField && isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
+                    disabled={!!(hasDefault && isEditing)}
+                    className={`w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${hasDefault && isEditing ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : ''
                       }`}
                   />
                 )}

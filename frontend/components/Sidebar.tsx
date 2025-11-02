@@ -1,7 +1,7 @@
 "use client"
 import React from 'react'
 import Link from 'next/link'
-import { Home, Table2, Settings, Code, FileCode } from 'lucide-react'
+import { Home, Table2, Settings, Code, FileCode, Zap, Blocks } from 'lucide-react'
 
 interface SidebarProps {
   onNavigate?: () => void
@@ -45,12 +45,32 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
           </li>
           <li>
             <Link
+              href="/query-builder"
+              onClick={onNavigate}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Blocks size={20} />
+              <span>Query Builder</span>
+            </Link>
+          </li>
+          <li>
+            <Link
               href="/functions"
               onClick={onNavigate}
               className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
             >
               <FileCode size={20} />
               <span>Functions & Procedures</span>
+            </Link>
+          </li>
+          <li>
+            <Link
+              href="/triggers"
+              onClick={onNavigate}
+              className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <Zap size={20} />
+              <span>Triggers</span>
             </Link>
           </li>
           <li>

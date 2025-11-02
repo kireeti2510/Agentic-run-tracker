@@ -185,7 +185,7 @@ function TablePageContent({ params }: any) {
         </>
       )}
 
-      <RecordModal open={open} onClose={() => setOpen(false)} onSave={handleSave} initial={selected} />
+      <RecordModal open={open} onClose={() => setOpen(false)} onSave={handleSave} initial={selected} table={table} />
       <ConfirmDialog
         open={confirmOpen}
         onClose={() => setConfirmOpen(false)}

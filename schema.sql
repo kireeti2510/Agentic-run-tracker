@@ -306,6 +306,87 @@ BEGIN
   RETURN agent_count; 
 END;
 
+-- Function to calculate average run duration for an agent
+CREATE FUNCTION avg_run_duration_for_agent(p_agent_id BIGINT UNSIGNED)
+RETURNS DECIMAL(10,2)
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+  DECLARE avg_duration DECIMAL(10,2);
+  
+  SELECT AVG(TIMESTAMPDIFF(SECOND, r1.time, r2.time)) INTO avg_duration
+  FROM `Run` r1
+  LEFT JOIN `Run` r2 ON r1.RunID = r2.Parent_RunID
+  WHERE r1.AgentID = p_agent_id AND r2.RunID IS NOT NULL;
+  
+  RETURN COALESCE(avg_duration, 0);
+END;
+
+-- Function to get project status based on runs
+CREATE FUNCTION get_project_health(p_project_id BIGINT UNSIGNED)
+RETURNS VARCHAR(20)
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+  DECLARE failed_count INT;
+  DECLARE total_count INT;
+  DECLARE health_status VARCHAR(20);
+  
+  SELECT COUNT(*) INTO total_count
+  FROM `Run` r
+  JOIN `Agent` a ON r.AgentID = a.AgentID
+  WHERE a.ProjectID = p_project_id;
+  
+  SELECT COUNT(*) INTO failed_count
+  FROM `Run` r
+  JOIN `Agent` a ON r.AgentID = a.AgentID
+  WHERE a.ProjectID = p_project_id AND r.Status = 'failed';
+  
+  IF total_count = 0 THEN
+    SET health_status = 'no_runs';
+  ELSEIF failed_count = 0 THEN
+    SET health_status = 'healthy';
+  ELSEIF failed_count / total_count < 0.2 THEN
+    SET health_status = 'good';
+  ELSEIF failed_count / total_count < 0.5 THEN
+    SET health_status = 'warning';
+  ELSE
+    SET health_status = 'critical';
+  END IF;
+  
+  RETURN health_status;
+END;
+
+-- Function to count successful runs for an agent
+CREATE FUNCTION count_successful_runs(p_agent_id BIGINT UNSIGNED)
+RETURNS INT
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+  DECLARE success_count INT;
+  
+  SELECT COUNT(*) INTO success_count
+  FROM `Run`
+  WHERE AgentID = p_agent_id AND Status = 'succeeded';
+  
+  RETURN success_count;
+END;
+
+-- Function to check if a run has any failed steps
+CREATE FUNCTION has_failed_steps(p_run_id BIGINT UNSIGNED)
+RETURNS BOOLEAN
+READS SQL DATA
+DETERMINISTIC
+BEGIN
+  DECLARE failed_count INT;
+  
+  SELECT COUNT(*) INTO failed_count
+  FROM `RunStep`
+  WHERE RunID = p_run_id AND Status = 'error';
+  
+  RETURN failed_count > 0;
+END;
+
 -- ==========================
 -- PROCEDURES
 -- ==========================
@@ -333,6 +414,201 @@ BEGIN
   SELECT Type, URI, Checksum, Created_at 
   FROM `Artifact` 
   WHERE RunID = p_run_id; 
+END;
+
+-- Procedure to get project summary with agent and run counts
+CREATE PROCEDURE GetProjectSummary(
+  IN p_project_id BIGINT UNSIGNED
+)
+BEGIN
+  SELECT 
+    p.ProjectID,
+    p.name AS ProjectName,
+    p.status AS ProjectStatus,
+    p.created_at,
+    u.Fname,
+    u.Lname,
+    COUNT(DISTINCT a.AgentID) AS TotalAgents,
+    COUNT(DISTINCT r.RunID) AS TotalRuns,
+    SUM(CASE WHEN r.Status = 'succeeded' THEN 1 ELSE 0 END) AS SuccessfulRuns,
+    SUM(CASE WHEN r.Status = 'failed' THEN 1 ELSE 0 END) AS FailedRuns,
+    SUM(CASE WHEN r.Status = 'running' THEN 1 ELSE 0 END) AS RunningRuns
+  FROM `Project` p
+  JOIN `User` u ON p.userID = u.userID
+  LEFT JOIN `Agent` a ON p.ProjectID = a.ProjectID
+  LEFT JOIN `Run` r ON a.AgentID = r.AgentID
+  WHERE p.ProjectID = p_project_id
+  GROUP BY p.ProjectID, p.name, p.status, p.created_at, u.Fname, u.Lname;
+END;
+
+-- Procedure to get all runs with their steps count
+CREATE PROCEDURE GetRunsWithStepsCount(
+  IN p_agent_id BIGINT UNSIGNED
+)
+BEGIN
+  SELECT 
+    r.RunID,
+    r.Status,
+    r.time,
+    r.notes,
+    COUNT(rs.Step_No) AS TotalSteps,
+    SUM(CASE WHEN rs.Status = 'ok' THEN 1 ELSE 0 END) AS CompletedSteps,
+    SUM(CASE WHEN rs.Status = 'error' THEN 1 ELSE 0 END) AS FailedSteps,
+    SUM(CASE WHEN rs.Status = 'pending' THEN 1 ELSE 0 END) AS PendingSteps
+  FROM `Run` r
+  LEFT JOIN `RunStep` rs ON r.RunID = rs.RunID
+  WHERE r.AgentID = p_agent_id
+  GROUP BY r.RunID, r.Status, r.time, r.notes
+  ORDER BY r.time DESC;
+END;
+
+-- Procedure to get agent performance metrics
+CREATE PROCEDURE GetAgentPerformance(
+  IN p_agent_id BIGINT UNSIGNED
+)
+BEGIN
+  SELECT 
+    a.AgentID,
+    a.name AS AgentName,
+    a.version,
+    a.model,
+    COUNT(r.RunID) AS TotalRuns,
+    SUM(CASE WHEN r.Status = 'succeeded' THEN 1 ELSE 0 END) AS SuccessfulRuns,
+    SUM(CASE WHEN r.Status = 'failed' THEN 1 ELSE 0 END) AS FailedRuns,
+    ROUND(SUM(CASE WHEN r.Status = 'succeeded' THEN 1 ELSE 0 END) * 100.0 / COUNT(r.RunID), 2) AS SuccessRate,
+    COUNT(DISTINCT art.ArtifactID) AS TotalArtifacts,
+    AVG(rm.Value_Numeric) AS AvgMetricValue
+  FROM `Agent` a
+  LEFT JOIN `Run` r ON a.AgentID = r.AgentID
+  LEFT JOIN `Artifact` art ON r.RunID = art.RunID
+  LEFT JOIN `RunMetric` rm ON r.RunID = rm.RunID AND rm.DataType = 'numeric'
+  WHERE a.AgentID = p_agent_id
+  GROUP BY a.AgentID, a.name, a.version, a.model;
+END;
+
+-- Procedure to get user's project statistics
+CREATE PROCEDURE GetUserProjectStats(
+  IN p_user_id BIGINT UNSIGNED
+)
+BEGIN
+  SELECT 
+    u.userID,
+    CONCAT(u.Fname, ' ', u.Lname) AS FullName,
+    u.Email,
+    COUNT(DISTINCT p.ProjectID) AS TotalProjects,
+    SUM(CASE WHEN p.status = 'active' THEN 1 ELSE 0 END) AS ActiveProjects,
+    SUM(CASE WHEN p.status = 'archived' THEN 1 ELSE 0 END) AS ArchivedProjects,
+    COUNT(DISTINCT a.AgentID) AS TotalAgents,
+    COUNT(DISTINCT r.RunID) AS TotalRuns
+  FROM `User` u
+  LEFT JOIN `Project` p ON u.userID = p.userID
+  LEFT JOIN `Agent` a ON p.ProjectID = a.ProjectID
+  LEFT JOIN `Run` r ON a.AgentID = r.AgentID
+  WHERE u.userID = p_user_id
+  GROUP BY u.userID, u.Fname, u.Lname, u.Email;
+END;
+
+-- Procedure to get all datasets for a project with usage statistics
+CREATE PROCEDURE GetProjectDatasets(
+  IN p_project_id BIGINT UNSIGNED
+)
+BEGIN
+  SELECT 
+    d.DatasetID,
+    d.name AS DatasetName,
+    d.version,
+    d.URL,
+    d.type AS DatasetType,
+    p.name AS ProjectName,
+    COUNT(DISTINCT a.AgentID) AS AgentsUsingProject
+  FROM `Dataset` d
+  JOIN `Project` p ON d.ProjectID = p.ProjectID
+  LEFT JOIN `Agent` a ON p.ProjectID = a.ProjectID
+  WHERE d.ProjectID = p_project_id
+  GROUP BY d.DatasetID, d.name, d.version, d.URL, d.type, p.name
+  ORDER BY d.name;
+END;
+
+-- Procedure to create a new run with environment
+CREATE PROCEDURE CreateRunWithEnvironment(
+  IN p_agent_id BIGINT UNSIGNED,
+  IN p_notes TEXT,
+  IN p_env_name VARCHAR(200),
+  IN p_framework VARCHAR(100),
+  IN p_python_version VARCHAR(50),
+  IN p_gpu_cores INT UNSIGNED,
+  IN p_cpu_cores INT UNSIGNED,
+  OUT p_run_id BIGINT UNSIGNED
+)
+BEGIN
+  -- Insert the run
+  INSERT INTO `Run` (Status, notes, AgentID)
+  VALUES ('queued', p_notes, p_agent_id);
+  
+  SET p_run_id = LAST_INSERT_ID();
+  
+  -- Insert the environment
+  INSERT INTO `Environment` (Name, Framework, Python_Version, GPU_Cores, CPU_Cores, RunID)
+  VALUES (p_env_name, p_framework, p_python_version, p_gpu_cores, p_cpu_cores, p_run_id);
+  
+  SELECT p_run_id AS NewRunID;
+END;
+
+-- Procedure to get run execution timeline
+CREATE PROCEDURE GetRunTimeline(
+  IN p_run_id BIGINT UNSIGNED
+)
+BEGIN
+  SELECT 
+    rs.RunID,
+    rs.Step_No,
+    rs.Name AS StepName,
+    rs.Status,
+    rs.Step_Type,
+    rs.Time AS StepTime,
+    TIMEDIFF(
+      LEAD(rs.Time) OVER (ORDER BY rs.Step_No),
+      rs.Time
+    ) AS Duration
+  FROM `RunStep` rs
+  WHERE rs.RunID = p_run_id
+  ORDER BY rs.Step_No;
+END;
+
+-- Procedure to archive old projects
+CREATE PROCEDURE ArchiveOldProjects(
+  IN p_days_old INT
+)
+BEGIN
+  UPDATE `Project`
+  SET status = 'archived'
+  WHERE status = 'active'
+  AND created_at < DATE_SUB(NOW(), INTERVAL p_days_old DAY);
+  
+  SELECT ROW_COUNT() AS ProjectsArchived;
+END;
+
+-- Procedure to get top performing agents by success rate
+CREATE PROCEDURE GetTopPerformingAgents(
+  IN p_limit INT
+)
+BEGIN
+  SELECT 
+    a.AgentID,
+    a.name AS AgentName,
+    a.version,
+    a.model,
+    p.name AS ProjectName,
+    COUNT(r.RunID) AS TotalRuns,
+    SUM(CASE WHEN r.Status = 'succeeded' THEN 1 ELSE 0 END) AS SuccessfulRuns,
+    ROUND(SUM(CASE WHEN r.Status = 'succeeded' THEN 1 ELSE 0 END) * 100.0 / COUNT(r.RunID), 2) AS SuccessRate
+  FROM `Agent` a
+  JOIN `Project` p ON a.ProjectID = p.ProjectID
+  JOIN `Run` r ON a.AgentID = r.AgentID
+  GROUP BY a.AgentID, a.name, a.version, a.model, p.name
+  HAVING COUNT(r.RunID) > 0
+  ORDER BY SuccessRate DESC, TotalRuns DESC
+  LIMIT p_limit;
 END;
 
 -- ==========================

@@ -61,7 +61,7 @@ app.use((req: any, res: any, next: any) => {
 // Helper: list tables in the current database/schema
 app.get('/api/meta/tables', async (req: Request, res: Response) => {
   try {
-    const rows = await prisma.$queryRawUnsafe(
+    const rows = await prisma.$queryRawUnsafe<any[]>(
       `SELECT TABLE_NAME as table_name FROM information_schema.tables WHERE table_schema = DATABASE()`
     );
     const tables = rows.map((r: any) => r.table_name);
@@ -69,6 +69,30 @@ app.get('/api/meta/tables', async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'failed to list tables' });
+  }
+});
+
+// Get table schema with column details including default values
+app.get('/api/meta/schema/:table', async (req: Request, res: Response) => {
+  const table = req.params.table;
+  try {
+    const columns = await prisma.$queryRawUnsafe<any[]>(
+      `SELECT 
+        COLUMN_NAME as name,
+        DATA_TYPE as type,
+        IS_NULLABLE as nullable,
+        COLUMN_DEFAULT as defaultValue,
+        COLUMN_KEY as key,
+        EXTRA as extra
+      FROM information_schema.COLUMNS 
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+      ORDER BY ORDINAL_POSITION`,
+      table
+    );
+    res.json({ columns });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'failed to fetch schema' });
   }
 });
 
