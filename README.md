@@ -1,726 +1,307 @@
-# Agentic Run Tracker
+# Agentic AI Run Tracker
 
-> A full-stack web application for tracking and managing AI agent runs, projects, and datasets with a modern, responsive UI and MySQL backend.
+A full-stack web application for tracking AI agent runs, experiments, and metrics with MySQL database backend.
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
-![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-blue.svg)
-![Python](https://img.shields.io/badge/python-%3E%3D3.8-blue.svg)
+## 🚀 Features
 
-## 📋 Table of Contents
+### Core Functionality
+- **Database Management**: Full CRUD operations on 9 interconnected tables
+- **Dynamic Table Views**: Browse and manage all database tables through a unified interface
+- **SQL Query Executor**: Execute custom SQL queries, functions, and stored procedures
+- **Functions & Procedures**: Built-in database functions and stored procedures with documentation
+- **Real-time Updates**: Automatic data refresh with optimistic updates
+- **Error Handling**: User-friendly error messages for database constraints
 
-- [Overview](#overview)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Running the Application](#running-the-application)
-- [Usage Guide](#usage-guide)
-- [Project Structure](#project-structure)
-- [API Documentation](#api-documentation)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
+### User Experience
+- **Responsive Design**: Mobile-friendly interface with TailwindCSS
+- **Toast Notifications**: Real-time feedback for all operations
+- **Confirmation Dialogs**: Safe delete operations with confirmation
+- **Undo Feature**: 5-second window to undo delete operations
+- **Auto-generated Fields**: Automatic handling of timestamps and default values
+- **Date Formatting**: Human-readable date display throughout the app
 
-## 🎯 Overview
+## 📊 Database Schema
 
-Agentic Run Tracker is a comprehensive database management system designed for tracking AI agent runs, experiments, and related metadata. It features:
+### Tables (9 Total)
+1. **User** - User information
+2. **Project** - Project management
+3. **Agent** - AI agent configurations
+4. **Environment** - Execution environments
+5. **Dataset** - Training/testing datasets
+6. **Run** - Agent execution runs
+7. **RunStep** - Individual run steps
+8. **RunMetric** - Run performance metrics
+9. **Artifact** - Generated artifacts
 
-- **MySQL Backend**: Robust relational database with stored procedures, triggers, and functions
-- **RESTful API**: Express.js backend with full CRUD operations
-- **Modern UI**: Next.js 14 frontend with Tailwind CSS v4
-- **Responsive Design**: Mobile-first design that works on all devices
-- **Real-time Updates**: React Query for efficient data fetching and caching
+### Custom Functions
+- `count_agents_in_project(project_id)` - Count agents per project
 
-## ✨ Features
-
-### Frontend
-
-- 📊 **Dashboard**: Overview with statistics and quick access to tables
-- 🗃️ **Database Browser**: Browse all MySQL tables with a beautiful card-based UI
-- ✏️ **CRUD Operations**: Create, Read, Update, and Delete records on any table
-- 📱 **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
-- 🎨 **Modern UI**: Built with Tailwind CSS v4, featuring smooth animations and gradients
-- 🔍 **Pagination**: Navigate through large datasets efficiently
-- 🍞 **Toast Notifications**: Real-time feedback for all operations
-- 🎭 **Modals**: Clean, accessible forms for creating and editing records
-
-### Backend
-
-- 🔌 **RESTful API**: Full CRUD endpoints for dynamic table access
-- 🔒 **SQL Injection Protection**: Validated table names against schema
-- 🗄️ **MySQL Integration**: Direct connection to MySQL database
-- 📦 **Prisma ORM**: Type-safe database access (optional)
-- 🔄 **CORS Support**: Configurable cross-origin resource sharing
-
-### Database
-
-- 📋 **9 Core Tables**: agent, artifact, dataset, environment, project, run, runmetric, runstep, user
-- 🔧 **Stored Procedures**: Pre-built functions for complex operations
-- ⚡ **Triggers**: Automatic timestamp and data validation
-- 🌱 **Seed Data**: Example data to get started quickly
+### Stored Procedures
+- `GetRunsByAgent(agent_id)` - Retrieve all runs for an agent
+- `GetRunMetrics(run_id)` - Get metrics for a specific run
+- `GetArtifactsForRun(run_id)` - List artifacts for a run
 
 ## 🛠️ Tech Stack
 
-### Frontend
-
-- **Framework**: Next.js 14 (App Router)
-- **UI Library**: React 18
-- **Styling**: Tailwind CSS v4
-- **State Management**: TanStack React Query (React Query v5)
-- **HTTP Client**: Axios
-- **Animations**: Framer Motion
-- **Icons**: Lucide React
-- **Notifications**: Sonner
-- **Language**: TypeScript
-
 ### Backend
-
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database ORM**: Prisma
-- **Database**: MySQL 8.0+
-- **Language**: TypeScript
-- **Middleware**: CORS, Body-parser
-
-### Development Tools
-
-- **Testing**: Vitest
-- **Build Tool**: Next.js built-in compiler
-- **Package Manager**: npm
-
-## 📋 Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-- **Node.js** (v18.0.0 or higher) - [Download](https://nodejs.org/)
-- **Python** (v3.8 or higher) - [Download](https://www.python.org/)
-- **MySQL** (v8.0 or higher) - [Download](https://dev.mysql.com/downloads/)
-- **Git** - [Download](https://git-scm.com/)
-
-Check your installations:
-
-```bash
-node --version
-python --version
-mysql --version
-```
-
-## 📦 Installation
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/srinix18/Agentic-run-tracker.git
-cd Agentic-run-tracker
-```
-
-### 2. Database Setup
-
-#### Create MySQL Database
-
-```sql
--- Login to MySQL
-mysql -u root -p
-
--- Create database
-CREATE DATABASE agentic_tracker;
-USE agentic_tracker;
-```
-
-#### Configure Database Connection
-
-```bash
-# Copy the environment template
-cp .env.example .env
-
-# Edit .env with your MySQL credentials
-# Example:
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=agentic_tracker
-```
-
-#### Apply Schema and Seed Data
-
-```bash
-# (Optional) Create Python virtual environment
-python -m venv venv
-
-# Activate virtual environment
-# Windows PowerShell:
-.\venv\Scripts\Activate.ps1
-# Windows CMD:
-.\venv\Scripts\activate.bat
-# macOS/Linux:
-source venv/bin/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-
-# Apply schema and seed data
-python run_sql.py --apply
-```
-
-This will create all tables, stored procedures, triggers, and insert sample data (10 users, 10 projects, 10 agents, 10 runs).
-
-### 3. Backend Setup
-
-```bash
-# Navigate to backend directory
-cd backend
-
-# Install Node.js dependencies
-npm install
-
-# Configure Prisma (optional)
-npx prisma generate
-
-# Start the backend server
-npm run dev
-```
-
-Backend will run on **http://localhost:4000**
-
-### 4. Frontend Setup
-
-```bash
-# Navigate to frontend directory (from project root)
-cd frontend
-
-# Install Node.js dependencies
-npm install
-
-# Start the development server
-npm run dev
-```
-
-Frontend will run on **http://localhost:3000**
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-#### Backend (`.env` in root directory)
-
-```env
-# MySQL Connection
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=agentic_tracker
-
-# Prisma Database URL
-DATABASE_URL="mysql://root:your_password@localhost:3306/agentic_tracker"
-
-# Server Port (optional)
-PORT=4000
-```
-
-#### Frontend (`.env.local` in `frontend/` directory)
-
-```env
-# API Base URL (optional - defaults to http://localhost:4000)
-NEXT_PUBLIC_API_URL=http://localhost:4000
-```
-
-### Port Configuration
-
-Default ports:
-
-- **Frontend**: 3000
-- **Backend**: 4000
-- **MySQL**: 3306
-
-To change ports:
-
-- **Frontend**: Edit `package.json` → `"dev": "next dev -p 3000"`
-- **Backend**: Set `PORT` in `.env` or edit `backend/src/index.ts`
-
-## 🚀 Running the Application
-
-### Quick Start (All Services)
-
-#### Windows PowerShell:
-
-```powershell
-# Terminal 1 - Backend
-cd backend
-npm run dev
-
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
-```
-
-#### macOS/Linux:
-
-```bash
-# Terminal 1 - Backend
-cd backend && npm run dev
-
-# Terminal 2 - Frontend
-cd frontend && npm run dev
-```
-
-### Access the Application
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:4000
-- **API Health Check**: http://localhost:4000/api/meta/tables
-
-### Verify Installation
-
-```bash
-# Check backend is running
-curl http://localhost:4000/api/meta/tables
-
-# Expected output:
-{"tables":["agent","artifact","dataset","environment","project","run","runmetric","runstep","user"]}
-```
-
-## 📖 Usage Guide
-
-### Dashboard
-
-1. **Navigate to http://localhost:3000**
-2. You'll see the dashboard with:
-   - Statistics cards showing total tables, active runs, and projects
-   - Grid of available database tables
-   - Quick action buttons
-
-### Browse Tables
-
-1. **From Dashboard**: Click on any table card
-2. **From Menu**:
-   - Click hamburger menu (mobile) or use sidebar (desktop)
-   - Click "Tables" → Browse all tables
-
-### View Table Data
-
-1. Click on a table name (e.g., "agent", "project")
-2. See all records in a responsive table view
-3. Use pagination to navigate through records
-
-### Create New Record
-
-1. Navigate to any table detail page
-2. Click **"+ New Record"** button (green button, top-right)
-3. Fill in the form fields in the modal
-4. Click **"Save Changes"**
-5. Success toast notification will appear
-
-### Edit Record
-
-1. Find the record in the table
-2. Click the **"Edit"** button on that row
-3. Modify values in the modal
-4. Click **"Save Changes"**
-5. Changes are saved and table refreshes
-
-### Delete Record
-
-1. Find the record in the table
-2. Click the **"Delete"** button on that row
-3. Confirm deletion in the dialog
-4. Click **"Delete"** to confirm
-5. Record is removed and table refreshes
-
-### Navigation
-
-#### Desktop
-
-- Sidebar is always visible on the left
-- Click "Dashboard", "Tables", or "Settings" to navigate
-
-#### Mobile
-
-- Tap hamburger menu icon (top-left)
-- Sidebar slides in from left
-- Tap any link to navigate
-- Sidebar auto-closes after selection
-
-### Responsive Features
-
-- **Mobile**: Horizontal scrolling for tables, stacked layouts
-- **Tablet**: 2-column grids, optimized spacing
-- **Desktop**: 3-4 column grids, full sidebar
+- **Node.js** 25.1.0
+- **Express** - REST API server
+- **Prisma** - ORM for database access
+- **TypeScript** - Type-safe development
+- **MySQL** 9.4.0 - Database
+
+### Frontend
+- **Next.js** 14.2.33 - React framework
+- **React** 18 - UI library
+- **TailwindCSS** - Styling
+- **TanStack Query** - Data fetching & caching
+- **Sonner** - Toast notifications
+- **Framer Motion** - Animations
+- **Lucide React** - Icons
 
 ## 📁 Project Structure
 
 ```
-agentic-run-tracker/
-├── backend/                    # Express.js API server
-│   ├── src/
-│   │   ├── index.ts           # Main server file with API routes
-│   │   ├── db.ts              # Prisma client configuration
-│   │   └── types.d.ts         # TypeScript type definitions
+Agentic-run-tracker/
+├── backend/
 │   ├── prisma/
-│   │   └── schema.prisma      # Prisma schema (optional)
-│   ├── tests/                 # Backend tests
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── frontend/                   # Next.js 14 frontend
-│   ├── app/                   # App Router pages
-│   │   ├── layout.tsx         # Root layout with navigation
-│   │   ├── page.tsx           # Dashboard page
-│   │   ├── globals.css        # Global styles (Tailwind)
-│   │   ├── _dashboard/
-│   │   │   └── DashboardContent.tsx
-│   │   └── tables/
-│   │       ├── page.tsx       # Tables listing
-│   │       └── [table]/
-│   │           └── page.tsx   # Table detail with CRUD
-│   ├── components/            # React components
-│   │   ├── ClientShell.tsx    # Navigation shell with mobile menu
-│   │   ├── Sidebar.tsx        # Sidebar navigation
-│   │   ├── Topbar.tsx         # Top bar
-│   │   ├── TableView.tsx      # Data table component
-│   │   ├── RecordModal.tsx    # Create/Edit modal
-│   │   ├── ConfirmDialog.tsx  # Delete confirmation
-│   │   └── DashboardClient.tsx
-│   ├── hooks/
-│   │   └── useTable.tsx       # Custom hook for table operations
-│   ├── lib/
-│   │   └── api.ts             # API client (Axios)
-│   ├── tests/                 # Frontend tests
-│   ├── package.json
-│   ├── tailwind.config.js     # Tailwind configuration
-│   └── next.config.js         # Next.js configuration
-│
-├── schema.sql                  # MySQL schema with seed data
-├── run_sql.py                 # Schema application script
-├── run_queries.sql            # Example SQL queries
-├── requirements.txt           # Python dependencies
-├── .env.example              # Environment template
-├── .gitignore
+│   │   └── schema.prisma          # Database schema
+│   ├── src/
+│   │   ├── index.ts               # Express server
+│   │   └── db.ts                  # Prisma client
+│   └── package.json
+├── frontend/
+│   ├── app/
+│   │   ├── page.tsx               # Dashboard
+│   │   ├── tables/                # Table views
+│   │   ├── sql-query/             # SQL executor
+│   │   ├── functions/             # Functions docs
+│   │   └── settings/              # Settings
+│   ├── components/                # React components
+│   ├── hooks/                     # Custom hooks
+│   └── lib/
+│       └── api.ts                 # API client
+├── schema.sql                     # Database schema with data
+├── run_queries.sql                # Example queries
 └── README.md
 ```
 
-## 🔌 API Documentation
+## 🚀 Getting Started
 
-### Base URL
+### Prerequisites
+- Node.js 25.1.0 or higher
+- MySQL 9.4.0 or higher
+- npm or yarn
 
-```
-http://localhost:4000/api
-```
+### 1. Database Setup
 
-### Endpoints
+```bash
+# Start MySQL server
+mysql.server start
 
-#### Get All Tables
-
-```http
-GET /api/meta/tables
-```
-
-**Response:**
-
-```json
-{
-  "tables": [
-    "agent",
-    "artifact",
-    "dataset",
-    "environment",
-    "project",
-    "run",
-    "runmetric",
-    "runstep",
-    "user"
-  ]
-}
+# Create database and load schema
+mysql -u root -p < schema.sql
 ```
 
-#### Get Table Records
+### 2. Environment Configuration
 
-```http
-GET /api/:table?page=1&limit=20
+Create `.env` file in the root directory:
+
+```env
+DATABASE_URL="mysql://root:YOUR_PASSWORD@localhost:3306/agentic_tracker"
+PORT=4000
 ```
 
-**Parameters:**
+Create `frontend/.env.local`:
 
-- `table` (path): Table name
-- `page` (query): Page number (default: 1)
-- `limit` (query): Records per page (default: 20)
-
-**Response:**
-
-```json
-{
-  "data": [...],
-  "page": 1,
-  "limit": 20
-}
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000
 ```
 
-#### Get Single Record
+### 3. Backend Setup
 
-```http
-GET /api/:table/:id
+```bash
+cd backend
+
+# Install dependencies
+npm install
+
+# Generate Prisma client
+npx prisma generate
+
+# Start development server
+npm run dev
 ```
 
-**Response:**
+Backend will run on `http://localhost:4000`
 
-```json
-{
-  "id": 1,
-  "name": "Example",
-  ...
-}
+### 4. Frontend Setup
+
+```bash
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
 ```
 
-#### Create Record
+Frontend will run on `http://localhost:3000`
 
-```http
-POST /api/:table
-Content-Type: application/json
+## 📡 API Endpoints
 
-{
-  "name": "New Record",
-  "description": "Description",
-  ...
-}
+### Table Operations
+- `GET /api/meta/tables` - List all tables
+- `GET /api/:table` - Get table data (with pagination)
+- `POST /api/:table` - Create new record
+- `GET /api/:table/:id` - Get single record
+- `PUT /api/:table/:id` - Update record
+- `DELETE /api/:table/:id` - Delete record
+
+### Query Execution
+- `POST /api/query/execute` - Execute custom SQL query
+
+Example:
+```bash
+curl -X POST http://localhost:4000/api/query/execute \
+  -H "Content-Type: application/json" \
+  -d '{"query": "SELECT * FROM User LIMIT 5;"}'
 ```
 
-#### Update Record
+### Health Check
+- `GET /health` - Server health status
 
-```http
-PUT /api/:table/:id
-Content-Type: application/json
+## 🎯 Usage
 
-{
-  "name": "Updated Record",
-  ...
-}
+### Browse Tables
+1. Navigate to **Tables** from the sidebar
+2. Click any table to view its data
+3. Use **+ New Record** to add entries
+4. Click any row to edit
+5. Use delete button with confirmation
+
+### Execute SQL Queries
+1. Go to **SQL Query** page
+2. Type your query or select an example
+3. Click **Execute Query**
+4. View results in formatted table
+
+### View Documentation
+1. Visit **Functions & Procedures** page
+2. Browse available functions and procedures
+3. Copy example queries
+4. View full SQL definitions
+
+## 🔒 Security Notes
+
+⚠️ **Development Mode Only**
+
+This application is designed for development/educational purposes. For production:
+
+- [ ] Add authentication & authorization
+- [ ] Implement rate limiting
+- [ ] Add SQL injection protection
+- [ ] Enable query logging
+- [ ] Use parameterized queries
+- [ ] Add API key authentication
+- [ ] Enable CORS restrictions
+- [ ] Use environment-specific configs
+- [ ] Add input validation
+- [ ] Implement user roles
+
+## 📝 Sample Data
+
+The database includes 10 sample records for each table:
+- 10 Users
+- 10 Projects
+- 10 Agents
+- 10 Environments
+- 10 Datasets
+- 10 Runs
+- 10 Run Steps
+- 10 Run Metrics
+- 10 Artifacts
+
+## 🧪 Testing
+
+### Test Backend
+```bash
+curl http://localhost:4000/health
+curl http://localhost:4000/api/meta/tables
 ```
 
-#### Delete Record
+### Test Frontend
+Open browser to `http://localhost:3000`
 
-```http
-DELETE /api/:table/:id
-```
-
-### Error Responses
-
-```json
-{
-  "error": "Error message"
-}
+### Test SQL Queries
+```bash
+curl -X POST http://localhost:4000/api/query/execute \
+  -H "Content-Type: application/json" \
+  -d '{"query": "SELECT COUNT(*) as total FROM User;"}'
 ```
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Port Already in Use
+```bash
+# Kill process on port 4000
+lsof -ti:4000 | xargs kill -9
 
-#### 1. Port Already in Use
-
-**Error:** `EADDRINUSE: address already in use`
-
-**Solution:**
-
-```powershell
-# Windows - Find and kill process on port 3000/4000
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
-
-# macOS/Linux
+# Kill process on port 3000
 lsof -ti:3000 | xargs kill -9
 ```
 
-Or use different ports:
-
-```bash
-# Frontend
-npm run dev -- -p 3002
-
-# Backend - change PORT in .env
-PORT=4001
-```
-
-#### 2. Database Connection Failed
-
-**Error:** `ECONNREFUSED` or `Access denied`
-
-**Solution:**
-
-- Verify MySQL is running: `mysql -u root -p`
-- Check credentials in `.env`
-- Ensure database exists: `CREATE DATABASE agentic_tracker;`
-- Check `DATABASE_URL` format in `.env`
-
-#### 3. Tailwind CSS Not Working
-
-**Error:** Unstyled page, Times New Roman font
-
-**Solution:**
-
-```bash
-cd frontend
-# Clear Next.js cache
-rm -rf .next
-# Restart dev server
-npm run dev
-# Hard refresh browser: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
-```
-
-#### 4. QueryClient Error
-
-**Error:** `No QueryClient set`
-
-**Solution:** Already fixed in code. If you see this, ensure you're using the latest version from this repo.
-
-#### 5. Module Not Found
-
-**Error:** `Cannot find module`
-
-**Solution:**
-
-```bash
-# Reinstall dependencies
-cd frontend  # or backend
-rm -rf node_modules package-lock.json
-npm install
-```
-
-#### 6. Python Script Fails
-
-**Error:** Schema application fails
-
-**Solution:**
-
-```bash
-# Ensure Python dependencies are installed
-pip install -r requirements.txt
-
-# Check MySQL credentials in .env
-# Verify MySQL is running and accessible
-
-# Run with verbose output
-python run_sql.py --apply --verbose
-```
-
-### Debug Mode
-
-#### Frontend Debug
-
-```bash
-# Check Next.js build
-cd frontend
-npm run build
-
-# Check for errors in browser console (F12)
-```
-
-#### Backend Debug
-
-```bash
-# Check backend logs in terminal
-# Test API manually
-curl http://localhost:4000/api/meta/tables
-```
-
-#### Database Debug
-
-```sql
--- Check tables exist
-SHOW TABLES;
-
--- Check data
-SELECT * FROM user LIMIT 5;
-SELECT * FROM project LIMIT 5;
-```
-
-## 🧪 Testing
-
-### Backend Tests
-
+### Prisma Client Issues
 ```bash
 cd backend
-npm test
+npx prisma generate
 ```
 
-### Frontend Tests
+### Database Connection Issues
+- Check MySQL is running: `mysql.server status`
+- Verify credentials in `.env`
+- Check database exists: `SHOW DATABASES;`
 
-```bash
-cd frontend
-npm test
-```
+## 📚 Additional Documentation
 
-### Run All Tests
+- [SQL Features Documentation](./SQL_FEATURES.md) - Detailed SQL features guide
+- [Database Schema](./schema.sql) - Complete schema with functions/procedures
+- [Example Queries](./run_queries.sql) - Sample queries
 
-```bash
-# Backend
-cd backend && npm test
+## 🎓 Academic Context
 
-# Frontend
-cd frontend && npm test
-```
-
-## 📝 Development Notes
-
-### Database Schema
-
-- **Idempotent**: Running `python run_sql.py --apply` multiple times is safe
-- **Seed Data**: 10 records each for users, projects, agents, and runs
-- **Stored Procedures**: Pre-built for complex operations
-- **Triggers**: Automatic timestamp updates
-
-### Code Style
-
-- **TypeScript**: Strict mode enabled
-- **ESLint**: Code linting configured
-- **Prettier**: Code formatting (configure as needed)
-
-### Tailwind CSS v4
-
-- Uses new `@import "tailwindcss"` syntax
-- PostCSS plugin: `@tailwindcss/postcss`
-- No `@tailwind` directives needed
+This project was developed for:
+- **Course**: Database Management Systems (DBMS)
+- **Semester**: 5
+- **Institution**: PES University
+- **Student IDs**: PES1UG23CS307, PES1UG23CS271
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these steps:
-
+This is an academic project. For improvements:
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit your changes: `git commit -m 'Add amazing feature'`
-4. Push to the branch: `git push origin feature/amazing-feature`
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
 5. Open a Pull Request
 
 ## 📄 License
 
-This project is for educational and demonstration purposes.
+This project is for educational purposes.
+
+## 👥 Authors
+
+- Kireeti Reddy P (PES1UG23CS307)
+- Contributor (PES1UG23CS271)
 
 ## 🙏 Acknowledgments
 
-- Next.js team for the amazing framework
-- Tailwind CSS for the utility-first CSS framework
-- Prisma for the excellent ORM
-- TanStack Query for data fetching
-- All open-source contributors
-
-## 📞 Support
-
-If you encounter issues:
-
-1. Check the [Troubleshooting](#troubleshooting) section
-2. Search existing GitHub issues
-3. Create a new issue with detailed description and logs
-
-## 🎯 Roadmap
-
-- [ ] User authentication and authorization
-- [ ] Real-time updates with WebSockets
-- [ ] Advanced filtering and search
-- [ ] Data visualization charts
-- [ ] Export data to CSV/JSON
-- [ ] Batch operations
-- [ ] API rate limiting
-- [ ] Docker containerization
+- PES University DBMS Faculty
+- Next.js & React Documentation
+- Prisma Documentation
+- MySQL Documentation
 
 ---
 
-**Built with ❤️ using Next.js, Express, and MySQL**
+**Built with ❤️ for DBMS Course, Semester 5**
